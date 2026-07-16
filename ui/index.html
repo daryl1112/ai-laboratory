@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ailab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+  <nav>
+    <div class="brand">ailab<span class="dot">_</span></div>
+    <a href="#/" data-nav="dash">Experiments</a>
+    <a href="#/tools" data-nav="tools">Tools</a>
+    <a href="#/services" data-nav="services">Services</a>
+    <a href="#/config" data-nav="config">Config</a>
+    <div class="foot" id="ws-state">ws: connecting…</div>
+  </nav>
+  <main id="view"></main>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+<script src="app.js"></script>
+</body>
+</html>
