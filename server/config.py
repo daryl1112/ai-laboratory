@@ -29,11 +29,11 @@ DEFAULTS: dict = {
         # Per-phase routing. Any phase may be overridden; "default" is the fallback.
         "default": "qwen3-coder:30b",
         "per_phase": {
-            "plan": "qwen3:30b-a3b-instruct-2507",
+            "plan": " qwen3:30b-a3b-thinking-2507-q4_K_M",
             "code": "qwen3-coder:30b",
             "checkin": "qwen3-coder:30b",
-            "conclude": "qwen3:30b-a3b-instruct-2507",
-            "chat": "qwen3:30b-a3b-instruct-2507",
+            "conclude": " qwen3:30b-a3b-thinking-2507-q4_K_M",
+            "chat": " qwen3:30b-a3b-thinking-2507-q4_K_M",
         },
         # Thinking mode per phase (only honored by models that support it).
         "think": {"plan": True, "code": False, "checkin": False, "conclude": True, "chat": True},
