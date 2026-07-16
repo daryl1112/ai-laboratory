@@ -56,7 +56,7 @@ class Settings:
 
     # API
     cors_origins: list[str] = [
-        o.strip() for o in _env("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
+        o.strip() for o in _env("CORS_ORIGINS", "http://10.0.0.90:3000").split(",") if o.strip()
     ]
 
     def ensure_dirs(self) -> None:

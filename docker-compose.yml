@@ -58,7 +58,7 @@ services:
       - ARCHITECT_MODEL=${ARCHITECT_MODEL:-qwen2.5-coder:7b}
       - EXPERIMENTS_DIR=${LAB_ROOT}/experiments
       - DB_PATH=/app/lab.db
-      - CORS_ORIGINS=http://localhost:3000
+      - CORS_ORIGINS=http://10.0.0.90:3000
       - LLM_CODEGEN=true
       # Restricted-egress wiring
       - EGRESS_INTERNAL_NETWORK=ai-lab-egress-internal
