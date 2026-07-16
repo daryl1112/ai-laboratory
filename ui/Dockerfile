@@ -6,7 +6,7 @@ RUN npm install
 FROM node:20-alpine AS builder
 WORKDIR /app
 # Baked into the client bundle at build time — the browser calls this URL.
-ARG NEXT_PUBLIC_API_BASE=http://backend:8000
+ARG NEXT_PUBLIC_API_BASE=http://10.0.0.90:8000
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
