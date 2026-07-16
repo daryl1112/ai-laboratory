@@ -1,53 +1,47 @@
 services:
   ollama:
-    image: ollama/ollama:rocm          # ROCm build for the Radeon 8060S (gfx1151)
-    container_name: ollama
-    restart: unless-stopped
+    image: ollama/ollama:latest
     ports:
       - "11434:11434"
     volumes:
       - ollama:/root/.ollama
-    devices:
-      - /dev/kfd
-      - /dev/dri
-    group_add:
-      - "991"
-      - "44"
-    environment:
-      - HSA_OVERRIDE_GFX_VERSION=11.5.1
-      - HSA_ENABLE_SDMA=0                 # stability fix for unified memory on Strix Halo
-      - OLLAMA_MAX_LOADED_MODELS=2        # keep both lab models resident
-      - OLLAMA_KEEP_ALIVE=60m             # avoid reload thrash between phases
-      - OLLAMA_HOST=0.0.0.0
+    # For NVIDIA GPUs, uncomment:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{ capabilities: ["gpu"] }]
 
-  postgres:
-    image: pgvector/pgvector:pg17
-    container_name: postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ailab
-      POSTGRES_USER: ailab
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ailab}
+  backend:
+    build: ./backend
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@ailab.local}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - "8000:8000"
     depends_on:
-      - postgres
+      - ollama
+    volumes:
+      # Trusted backend talks to the host daemon to create sibling experiment
+      # containers. Experiment containers themselves never get this socket.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Bind the experiments folder at the SAME absolute path inside the
+      # container so sibling-container volume binds resolve correctly on the host.
+      - ${LAB_ROOT}/experiments:${LAB_ROOT}/experiments
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - ARCHITECT_MODEL=${ARCHITECT_MODEL:-qwen2.5-coder:7b}
+      - EXPERIMENTS_DIR=${LAB_ROOT}/experiments
+      - DB_PATH=/app/lab.db
+      - CORS_ORIGINS=http://localhost:3000
+      - CONTAINER_NETWORK=none
+      - LLM_CODEGEN=true
+
+  ui:
+    build:
+      context: ./ui
+      args:
+        NEXT_PUBLIC_API_BASE: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   ollama:
-  postgres_data:
-  pgadmin_data:

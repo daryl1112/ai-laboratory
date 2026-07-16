@@ -1,0 +1,14 @@
+# python
+backend/.venv/
+__pycache__/
+*.pyc
+backend/lab.db
+.env
+
+# node
+ui/node_modules/
+ui/.next/
+
+# generated experiment runs (keep the folder, ignore contents)
+experiments/*/
+!experiments/.gitkeep
