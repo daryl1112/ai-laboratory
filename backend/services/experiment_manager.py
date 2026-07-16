@@ -55,7 +55,8 @@ class ExperimentManager:
             self._set_status(exp, Status.failed, error=str(e))
         return exp
 
-    def approve(self, exp_id: str) -> Experiment:
+    def approve(self, exp_id: str, network: str | None = None,
+                allowlist: list[str] | None = None) -> Experiment:
         exp = self.store.get(exp_id)
         if not exp:
             raise KeyError(exp_id)
@@ -64,6 +65,18 @@ class ExperimentManager:
         if exp.status not in (Status.awaiting_approval, Status.failed):
             raise ValueError(f"Cannot approve from status {exp.status}")
 
+        # Apply operator overrides from the approval gate onto the plan.
+        if network is not None:
+            exp.plan.network = network
+        if allowlist is not None:
+            exp.plan.network_allowlist = allowlist
+
+        # Seed the egress allowlist before the container starts.
+        if exp.plan.network == "restricted" and exp.plan.network_allowlist:
+            from services import egress
+            exp.plan.network_allowlist = egress.seed_allowlist(exp.plan.network_allowlist)
+
+        self.store.upsert(exp)
         codegen.materialize(exp.id, exp.plan)
         self._set_status(exp, Status.building)
         threading.Thread(target=self._run_worker, args=(exp.id,), daemon=True).start()
@@ -87,7 +100,10 @@ class ExperimentManager:
             if settings.host_experiments_dir:
                 from pathlib import Path
                 host_dir = Path(settings.host_experiments_dir) / exp_id
-            container = docker_manager.run_container(exp_id, exp_dir, host_dir=host_dir)
+            policy = exp.plan.network.value if exp.plan else "none"
+            container = docker_manager.run_container(
+                exp_id, exp_dir, host_dir=host_dir, network_policy=policy
+            )
             exp = self.store.get(exp_id)
             exp.container_id = container.id[:12]
             self._set_status(exp, Status.running)

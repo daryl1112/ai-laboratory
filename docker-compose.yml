@@ -1,15 +1,41 @@
 services:
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:rocm          # ROCm build for the Radeon 8060S (gfx1151)
+    container_name: ollama
+    restart: unless-stopped
     ports:
       - "11434:11434"
     volumes:
       - ollama:/root/.ollama
-    # For NVIDIA GPUs, uncomment:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices: [{ capabilities: ["gpu"] }]
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - "991"
+      - "44"
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=11.5.1
+      - HSA_ENABLE_SDMA=0          # stability fix for unified memory on Strix Halo
+      - OLLAMA_MAX_LOADED_MODELS=2          # keep VOx114 + coder resident together
+      - OLLAMA_KEEP_ALIVE=60m               # avoid reload thrash on delegation
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_IGPU_ENABLE=1
+
+  # Default-deny egress proxy. Straddles an internet-facing network and an
+  # internal (no-route) network the restricted experiments live on. Only hosts
+  # matching egress/filter.txt are reachable; the backend updates that file and
+  # reloads this proxy (SIGHUP) when an experiment is approved.
+  egress-proxy:
+    build: ./egress
+    container_name: ai-lab-egress-proxy
+    restart: unless-stopped
+    volumes:
+      - ./egress:/data
+    networks:
+      egress-external: {}
+      egress-internal:
+        aliases:
+          - egress-proxy
 
   backend:
     build: ./backend
@@ -17,6 +43,7 @@ services:
       - "8000:8000"
     depends_on:
       - ollama
+      - egress-proxy
     volumes:
       # Trusted backend talks to the host daemon to create sibling experiment
       # containers. Experiment containers themselves never get this socket.
@@ -24,14 +51,20 @@ services:
       # Bind the experiments folder at the SAME absolute path inside the
       # container so sibling-container volume binds resolve correctly on the host.
       - ${LAB_ROOT}/experiments:${LAB_ROOT}/experiments
+      # Shared egress allowlist file (also mounted into the proxy at /data).
+      - ./egress:/egress
     environment:
       - OLLAMA_HOST=http://ollama:11434
       - ARCHITECT_MODEL=${ARCHITECT_MODEL:-qwen2.5-coder:7b}
       - EXPERIMENTS_DIR=${LAB_ROOT}/experiments
       - DB_PATH=/app/lab.db
       - CORS_ORIGINS=http://localhost:3000
-      - CONTAINER_NETWORK=none
       - LLM_CODEGEN=true
+      # Restricted-egress wiring
+      - EGRESS_INTERNAL_NETWORK=ai-lab-egress-internal
+      - EGRESS_PROXY_URL=http://egress-proxy:8888
+      - EGRESS_PROXY_CONTAINER=ai-lab-egress-proxy
+      - EGRESS_FILTER_PATH=/egress/filter.txt
 
   ui:
     build:
@@ -45,3 +78,10 @@ services:
 
 volumes:
   ollama:
+
+networks:
+  egress-external:
+    name: ai-lab-egress-external
+  egress-internal:
+    name: ai-lab-egress-internal
+    internal: true

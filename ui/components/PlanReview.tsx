@@ -9,18 +9,27 @@ export default function PlanReview({ exp, onLaunched }: { exp: Experiment; onLau
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const plan = exp.plan!;
+  const [policy, setPolicy] = useState<string>(plan.network ?? "none");
+  const [allow, setAllow] = useState<string>((plan.network_allowlist ?? []).join(", "));
 
   async function approve() {
     setBusy(true);
     setErr(null);
     try {
-      await api.approve(exp.id);
+      const domains = allow.split(",").map((d) => d.trim()).filter(Boolean);
+      await api.approve(exp.id, policy, policy === "restricted" ? domains : []);
       onLaunched();
     } catch (e: any) {
       setErr(String(e.message));
       setBusy(false);
     }
   }
+
+  const policyBlurb: Record<string, string> = {
+    none: "Fully isolated — no network. Dependencies are baked in at build time.",
+    restricted: "Internet only for the allowlisted domains below, via a default-deny proxy.",
+    open: "Full internet access. Use only when the experiment genuinely needs it.",
+  };
 
   return (
     <div className="view">
@@ -67,7 +76,7 @@ export default function PlanReview({ exp, onLaunched }: { exp: Experiment; onLau
           {plan.risks.length > 0 && (
             <div className="warn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 9v4M12 17h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
-              <div>{plan.risks.join(" · ")} — runs in a network-isolated sandbox with CPU/memory caps and a hard timeout. The host Docker socket is never exposed to experiment code.</div>
+              <div>{plan.risks.join(" · ")} — runs with CPU/memory/PID caps, dropped capabilities, a read-only root filesystem, and a hard timeout. Network access follows the policy you set on the right. The host Docker socket is never exposed to experiment code.</div>
             </div>
           )}
 
@@ -80,7 +89,42 @@ export default function PlanReview({ exp, onLaunched }: { exp: Experiment; onLau
             <div className="kv"><span className="kk">Base image</span><span className="vv">{plan.docker.base_image}</span></div>
             <div className="kv"><span className="kk">Language</span><span className="vv">{plan.language}</span></div>
             <div className="kv"><span className="kk">Entrypoint</span><span className="vv">{plan.docker.entrypoint.join(" ")}</span></div>
-            <div className="kv"><span className="kk">Network</span><span className="vv">isolated</span></div>
+            <div className="kv"><span className="kk">Network</span><span className="vv" style={{ color: policy === "none" ? "var(--mint)" : policy === "open" ? "var(--red)" : "var(--amber)" }}>{policy}</span></div>
+          </div>
+
+          <div className="panel side-card">
+            <h4>Network access</h4>
+            <div className="seg">
+              {(["none", "restricted", "open"] as const).map((p) => (
+                <button
+                  key={p}
+                  className={`seg-btn ${policy === p ? "on" : ""} ${p === "open" ? "danger" : ""}`}
+                  onClick={() => setPolicy(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.6, marginTop: 10 }}>
+              {policyBlurb[policy]}
+            </p>
+            {plan.network !== policy && (
+              <p style={{ color: "var(--amber)", fontSize: 11, fontFamily: "var(--mono)", marginTop: 6 }}>
+                overriding architect recommendation: {plan.network}
+              </p>
+            )}
+            {policy === "restricted" && (
+              <>
+                <div className="field-label" style={{ margin: "14px 0 8px" }}>Allowed domains</div>
+                <input
+                  className="text"
+                  style={{ fontSize: 12 }}
+                  placeholder="pypi.org, huggingface.co"
+                  value={allow}
+                  onChange={(e) => setAllow(e.target.value)}
+                />
+              </>
+            )}
           </div>
 
           <div className="panel side-card">

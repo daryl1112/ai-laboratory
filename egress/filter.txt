@@ -1,0 +1,19 @@
+# Egress allowlist — one POSIX extended regex per line, matched against the
+# request host. Default-deny is on, so ONLY hosts matching a line are reachable.
+# The backend appends validated domains from approved experiment plans and
+# reloads the proxy (SIGHUP). Lines starting with # are ignored.
+
+# Python package installation
+(^|\.)pypi\.org$
+(^|\.)pythonhosted\.org$
+(^|\.)pip\.pypa\.io$
+
+# Model / dataset hubs
+(^|\.)huggingface\.co$
+(^|\.)hf\.co$
+(^|\.)pytorch\.org$
+(^|\.)ollama\.com$
+
+# Source hosting
+(^|\.)github\.com$
+(^|\.)githubusercontent\.com$

@@ -51,21 +51,43 @@ def build_image(exp_id: str, context_dir: Path) -> Iterator[str]:
     yield f"[docker] built image {tag}"
 
 
-def run_container(exp_id: str, context_dir: Path, host_dir: Path | None = None):
+def run_container(exp_id: str, context_dir: Path, host_dir: Path | None = None,
+                  network_policy: str = "none"):
     """Start the experiment container under the sandbox profile. Returns the container.
 
     host_dir is the bind source used when the backend runs inside a container and
     creates sibling containers on the host daemon (the mount source must be a host
     path). When None, context_dir is used (backend running directly on the host).
+
+    network_policy controls runtime egress:
+      none        -> --network none (fully isolated, default)
+      restricted  -> internal network + HTTP(S)_PROXY to the allowlist proxy
+      open        -> bridge network (full internet; use sparingly)
     """
     client = _client()
     tag = f"ai-lab/{exp_id}:latest"
     bind_source = str(host_dir or context_dir)
 
+    env: dict[str, str] = {}
+    net_kwargs: dict = {}
+    if network_policy == "restricted":
+        net_kwargs["network"] = settings.egress_internal_network
+        env.update({
+            "HTTP_PROXY": settings.egress_proxy_url,
+            "HTTPS_PROXY": settings.egress_proxy_url,
+            "http_proxy": settings.egress_proxy_url,
+            "https_proxy": settings.egress_proxy_url,
+            # never proxy same-host / metadata lookups
+            "NO_PROXY": "localhost,127.0.0.1",
+        })
+    elif network_policy == "open":
+        net_kwargs["network_mode"] = "bridge"
+    else:  # none
+        net_kwargs["network_mode"] = "none"
+
     kwargs = dict(
         name=f"ai-lab-{exp_id}",
         detach=True,
-        network_mode=settings.container_network,          # 'none' by default
         mem_limit=settings.container_memory,
         nano_cpus=int(settings.container_cpus * 1_000_000_000),
         pids_limit=settings.container_pids_limit,
@@ -74,9 +96,11 @@ def run_container(exp_id: str, context_dir: Path, host_dir: Path | None = None):
         read_only=True,
         tmpfs={"/tmp": "size=256m", "/experiment/artifacts": "size=512m"},
         working_dir="/experiment",
+        environment=env,
         # host results are collected from the mounted experiment dir
         volumes={bind_source: {"bind": "/experiment", "mode": "rw"}},
         labels={"ai-lab.experiment": exp_id},
+        **net_kwargs,
     )
 
     if settings.allow_nested_docker:

@@ -34,10 +34,15 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, model: model || null }),
     }).then((r) => j<Experiment>(r)),
-  approve: (id: string) =>
-    fetch(`${API_BASE}/api/experiments/${id}/approve`, { method: "POST" }).then(
-      (r) => j<Experiment>(r)
-    ),
+  approve: (id: string, network?: string, allowlist?: string[]) =>
+    fetch(`${API_BASE}/api/experiments/${id}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        network: network ?? null,
+        network_allowlist: allowlist ?? null,
+      }),
+    }).then((r) => j<Experiment>(r)),
   stop: (id: string) =>
     fetch(`${API_BASE}/api/experiments/${id}/stop`, { method: "POST" }).then((r) =>
       j<{ stopped: string }>(r)

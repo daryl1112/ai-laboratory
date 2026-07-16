@@ -33,7 +33,9 @@ Return ONLY valid JSON matching exactly this shape:
   },
   "benchmarks": ["each metric that will be measured"],
   "success_criteria": ["concrete stop/target thresholds"],
-  "risks": ["safety or resource risks worth flagging to the user"]
+  "risks": ["safety or resource risks worth flagging to the user"],
+  "network": "none | restricted | open",
+  "network_allowlist": ["domains the experiment must reach at runtime"]
 }
 
 Rules:
@@ -42,6 +44,14 @@ Rules:
 - If the brief describes an iterative/evolutionary loop, include an orchestrator
   file that runs the loop and logs to benchmark_history.json.
 - Always include the risks a reviewer should see (e.g. spawning containers).
+- Network access is default-deny. Choose the LEAST access that works:
+  * "none": the experiment only needs its declared libraries (installed at build
+    time). This is correct for most self-contained experiments. Leave
+    network_allowlist empty.
+  * "restricted": it must fetch specific things at runtime (models, datasets,
+    a named API). List ONLY the exact domains needed in network_allowlist.
+  * "open": it genuinely needs arbitrary internet. Rare — if you choose this,
+    add a clear entry to "risks" explaining why.
 """
 
 

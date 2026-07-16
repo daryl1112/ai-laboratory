@@ -26,6 +26,12 @@ class Status(str, Enum):
     stopped = "stopped"
 
 
+class NetworkPolicy(str, Enum):
+    none = "none"                      # --network none (default, fully isolated)
+    restricted = "restricted"         # internal net + allowlist egress proxy
+    open = "open"                     # full bridge internet (use sparingly)
+
+
 class PlanFile(BaseModel):
     path: str = Field(..., description="Relative path inside the experiment folder")
     purpose: str = ""
@@ -50,11 +56,21 @@ class Plan(BaseModel):
     benchmarks: list[str] = []
     success_criteria: list[str] = []
     risks: list[str] = []
+    # Runtime network access the experiment needs. Default-deny.
+    network: NetworkPolicy = NetworkPolicy.none
+    # Domains the experiment must reach at runtime (only used when network=restricted).
+    network_allowlist: list[str] = []
 
 
 class AnalyzeRequest(BaseModel):
     prompt: str
     model: str | None = None
+
+
+class ApproveRequest(BaseModel):
+    """Optional operator overrides applied at the approval gate."""
+    network: NetworkPolicy | None = None
+    network_allowlist: list[str] | None = None
 
 
 class Metric(BaseModel):

@@ -9,6 +9,7 @@ container while logs, artifacts, and metrics stream live to a command-center UI.
 ai-laboratory/
 ├── backend/          FastAPI engine (planner, codegen, docker manager, log bus)
 ├── ui/               Next.js command-center interface
+├── egress/           default-deny allowlist proxy for restricted experiments
 ├── experiments/      generated experiment code + results (one folder per run)
 └── docker-compose.yml
 ```
@@ -50,11 +51,25 @@ Requires a Docker daemon and a running Ollama (`ollama serve`).
 
 ## Safety model
 
-Experiment containers run with `--network none`, memory/CPU/PID caps, all Linux
-capabilities dropped, `no-new-privileges`, a read-only root filesystem plus a
-writable tmpfs, and a hard timeout. The host Docker socket is mounted only into
-the trusted backend, never into experiment containers. Experiments that need to
+Experiment containers run with memory/CPU/PID caps, all Linux capabilities
+dropped, `no-new-privileges`, a read-only root filesystem plus a writable
+tmpfs, and a hard timeout. The host Docker socket is mounted only into the
+trusted backend, never into experiment containers. Experiments that need to
 spawn their own containers use a rootless DinD / sysbox path
 (`ALLOW_NESTED_DOCKER=true`) rather than the host socket.
+
+Network access is default-deny and chosen per run at the approval gate:
+
+- `none` (default) — `--network none`, fully isolated. Declared libraries are
+  installed at build time, so most experiments work offline at runtime.
+- `restricted` — the container joins an internal, no-route network and reaches
+  the internet only through a default-deny proxy (`egress/`, tinyproxy). Only
+  the domains in the plan's allowlist are permitted; the backend seeds them into
+  the proxy and reloads it (SIGHUP) before the run starts. Domains are validated,
+  so a plan can't inject arbitrary rules.
+- `open` — full bridge internet. Flagged in red at the gate; use sparingly.
+
+Because AI-generated code with egress widens the blast radius, keep the resource
+and time caps on whenever you grant network access.
 
 See `backend/README.md` for the API and the log marker protocol.

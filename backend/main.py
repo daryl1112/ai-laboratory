@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from db import Store
-from schemas import AnalyzeRequest
+from schemas import AnalyzeRequest, ApproveRequest
 from services.experiment_manager import ExperimentManager
 from services.log_bus import bus
 
@@ -66,9 +66,11 @@ async def get_experiment(exp_id: str):
 
 
 @app.post("/api/experiments/{exp_id}/approve")
-async def approve(exp_id: str):
+async def approve(exp_id: str, req: ApproveRequest | None = None):
+    net = req.network.value if req and req.network else None
+    allow = req.network_allowlist if req else None
     try:
-        return manager.approve(exp_id)
+        return manager.approve(exp_id, network=net, allowlist=allow)
     except KeyError:
         raise HTTPException(404, "experiment not found")
     except ValueError as e:

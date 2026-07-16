@@ -10,6 +10,8 @@ export type Status =
 export interface PlanFile { path: string; purpose: string; content: string }
 export interface DockerSpec { base_image: string; system_packages: string[]; entrypoint: string[] }
 
+export type NetworkPolicy = "none" | "restricted" | "open";
+
 export interface Plan {
   title: string;
   objective: string;
@@ -22,6 +24,8 @@ export interface Plan {
   benchmarks: string[];
   success_criteria: string[];
   risks: string[];
+  network: NetworkPolicy;
+  network_allowlist: string[];
 }
 
 export interface Metric { name: string; value: number; unit: string; iteration: number | null; at: string }

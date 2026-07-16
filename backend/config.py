@@ -46,6 +46,14 @@ class Settings:
     container_network: str = _env("CONTAINER_NETWORK", "none")
     allow_nested_docker: bool = _bool("ALLOW_NESTED_DOCKER", False)
 
+    # Restricted-egress proxy (see egress/). Only used for network=restricted.
+    egress_internal_network: str = _env("EGRESS_INTERNAL_NETWORK", "ai-lab-egress-internal")
+    egress_proxy_url: str = _env("EGRESS_PROXY_URL", "http://egress-proxy:8888")
+    egress_proxy_container: str = _env("EGRESS_PROXY_CONTAINER", "ai-lab-egress-proxy")
+    # Shared filter file the backend writes and the proxy reads. Empty disables
+    # dynamic allowlist seeding (e.g. local dev without compose).
+    egress_filter_path: str = _env("EGRESS_FILTER_PATH", "")
+
     # API
     cors_origins: list[str] = [
         o.strip() for o in _env("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()

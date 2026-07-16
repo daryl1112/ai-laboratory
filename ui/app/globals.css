@@ -178,3 +178,9 @@ textarea.prompt:focus,input.text:focus{border-color:var(--cyan);box-shadow:0 0 0
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .err{background:rgba(255,92,110,.07);border:1px solid rgba(255,92,110,.3);border-radius:9px;padding:12px 14px;color:var(--red);font-size:13px;margin-top:14px;font-family:var(--mono)}
+
+.seg{display:flex;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:4px}
+.seg-btn{flex:1;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:6px;padding:7px 6px;cursor:pointer;transition:.15s}
+.seg-btn:hover{color:var(--txt)}
+.seg-btn.on{color:var(--cyan);border-color:var(--cyan-dim);background:rgba(59,232,255,.08)}
+.seg-btn.on.danger{color:var(--red);border-color:rgba(255,92,110,.4);background:rgba(255,92,110,.08)}
